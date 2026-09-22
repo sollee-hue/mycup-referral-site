@@ -305,15 +305,24 @@
     letter-spacing:-0.03em; margin-bottom:7px;
   }
   .reg-field .lb i{ color:var(--mint); font-style:normal; margin-left:3px }
-  .reg-field input{
+  .reg-field input, .reg-field select{
     display:block; width:100%; font:inherit; font-size:14.5px; color:var(--ink);
     background:var(--mint-50); border:1px solid var(--line); border-radius:12px;
     padding:13px 14px; letter-spacing:-0.02em;
-    transition:border-color .12s ease, background .12s ease;
+    transition:border-color .12s ease, background-color .12s ease;
   }
   .reg-field input::placeholder{ color:#A7B4B3 }
-  .reg-field input:focus{ outline:none; border-color:var(--mint); background:var(--paper) }
-  .reg-field input[aria-invalid="true"]{ border-color:#D2564F; background:#FEF7F6 }
+  .reg-field input:focus, .reg-field select:focus{ outline:none; border-color:var(--mint); background-color:var(--paper) }
+  .reg-field input[aria-invalid="true"], .reg-field select[aria-invalid="true"]{ border-color:#D2564F; background-color:#FEF7F6 }
+  .acct-row{ display:flex; gap:8px }
+  .acct-row select{
+    flex:0 0 44%; appearance:none; -webkit-appearance:none; cursor:pointer;
+    background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23545C5C' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center;
+    padding-right:32px;
+  }
+  .acct-row select:invalid{ color:#A7B4B3 }
+  .acct-row input{ flex:1; min-width:0 }
   .reg-field .hint{ display:block; font-size:11.5px; color:var(--faint); margin-top:6px; line-height:1.6 }
 
   .reg-agree{
@@ -668,9 +677,37 @@
         </label>
         <label class="reg-field">
           <span class="lb">계좌번호<i>*</i></span>
-          <input type="text" name="account" maxlength="40"
-                 placeholder="은행명과 계좌번호를 함께 입력해 주세요" required>
-          <span class="hint" id="acctHint">예) 국민은행 123456-78-901234 · 예금주가 추천인명과 같아야 해요</span>
+          <div class="acct-row">
+            <select name="bank" required aria-label="은행 선택">
+              <option value="" disabled selected>은행 선택</option>
+              <option>KB국민은행</option>
+              <option>신한은행</option>
+              <option>우리은행</option>
+              <option>하나은행</option>
+              <option>NH농협은행</option>
+              <option>IBK기업은행</option>
+              <option>카카오뱅크</option>
+              <option>토스뱅크</option>
+              <option>케이뱅크</option>
+              <option>SC제일은행</option>
+              <option>씨티은행</option>
+              <option>우체국</option>
+              <option>새마을금고</option>
+              <option>신협</option>
+              <option>수협은행</option>
+              <option>KDB산업은행</option>
+              <option>iM뱅크(대구)</option>
+              <option>부산은행</option>
+              <option>경남은행</option>
+              <option>광주은행</option>
+              <option>전북은행</option>
+              <option>제주은행</option>
+              <option>기타</option>
+            </select>
+            <input type="text" name="account" inputmode="numeric" maxlength="30"
+                   placeholder="계좌번호 입력" required>
+          </div>
+          <span class="hint" id="acctHint">예금주가 추천인명과 같아야 해요</span>
         </label>
 
         <div class="reg-agree-row">
@@ -948,8 +985,8 @@ function applyKind(){
     ? '사업자등록증상 상호를 입력해 주세요'
     : '실명을 입력해 주세요';
   acctHint.textContent = isBiz
-    ? '예) 국민은행 123456-78-901234 · 예금주가 상호 또는 대표자명과 같아야 해요'
-    : '예) 국민은행 123456-78-901234 · 예금주가 추천인명과 같아야 해요';
+    ? '예금주가 상호 또는 대표자명과 같아야 해요'
+    : '예금주가 추천인명과 같아야 해요';
   if (!isBiz) { bizNoEl.value = ''; bizNoEl.removeAttribute('aria-invalid'); }
 }
 [...regForm.elements.kind].forEach(r => r.addEventListener('change', applyKind));
@@ -977,7 +1014,10 @@ function validBizNo(value){
 
 // 입력 중 오류 표시 해제
 regForm.addEventListener('input', (e) => {
-  if (e.target.matches('input')) e.target.removeAttribute('aria-invalid');
+  if (e.target.matches('input, select')) e.target.removeAttribute('aria-invalid');
+});
+regForm.addEventListener('change', (e) => {
+  if (e.target.matches('select')) e.target.removeAttribute('aria-invalid');
 });
 
 function fail(el, msg){
@@ -1001,6 +1041,7 @@ function validate(f){
   if (isBiz && !validBizNo(f.bizNo.value))
     return fail(f.bizNo, '사업자등록번호 10자리를 정확히 입력해 주세요');
   if (phone.length < 9 || phone.length > 11) return fail(f.phone, '연락처를 정확히 입력해 주세요');
+  if (!f.bank.value) return fail(f.bank, '은행을 선택해 주세요');
   if (account.replace(/\D/g, '').length < 8) return fail(f.account, '계좌번호를 정확히 입력해 주세요');
   return true;
 }
@@ -1036,7 +1077,7 @@ async function sendForm(){
         name:    f.name.value.trim(),
         bizNo:   f.kind.value === '사업자' ? f.bizNo.value.trim() : '',
         phone:   f.phone.value.trim(),
-        account: f.account.value.trim(),
+        account: (f.bank.value + ' ' + f.account.value.trim()).trim(),
         agree:   true,
         source:  location.href
       })
